@@ -24,6 +24,7 @@ public final class ContextUtil {
             var level = net.minecraft.client.Minecraft.getInstance().level;
             return level != null ? level.registryAccess() : null;
         } catch (Throwable t) {
+            // 客户端类在专用服务端不存在，属于预期情况
             return null;
         }
     }

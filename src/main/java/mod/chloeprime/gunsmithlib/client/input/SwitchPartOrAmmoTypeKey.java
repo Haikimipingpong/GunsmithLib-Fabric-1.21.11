@@ -75,7 +75,7 @@ public final class SwitchPartOrAmmoTypeKey {
                 .map(ClientPacketListener::getConnection)
                 .filter(Connection::isConnected)
                 .isPresent();
-        if (true) {
+        if (isConnected) {
             sendSwitch(mod.chloeprime.gunsmithlib.network.C2SSwitchVariant.ACTION_NEXT_PART, 0);
         }
     }

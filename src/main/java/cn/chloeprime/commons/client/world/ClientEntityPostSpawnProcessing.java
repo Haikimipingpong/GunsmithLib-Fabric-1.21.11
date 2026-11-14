@@ -45,7 +45,9 @@ public final class ClientEntityPostSpawnProcessing {
             if (entity != null) {
                 try {
                     pending.action().accept(entity);
-                } catch (Throwable ignored) {
+                } catch (Throwable t) {
+                    mod.chloeprime.gunsmithlib.fcompat.GunsmithLibLog.warn(
+                            "ClientEntityPostSpawnProcessing callback failed for entity {}", entity, t);
                 }
                 return true;
             }

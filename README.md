@@ -124,6 +124,9 @@ export JAVA_HOME=/path/to/jdk-25      # 必须是 JDK 25，fabric-loom 1.19.4 �
   自行继续，或联系原作者。
 
 > **最难的 Fabric 1.21.11 地基已经打通，剩下的交给你们了。欢迎提交 PR。**
+>
+> 接手前请先看 **[技术债清单](TECHNICAL_DEBT.md)** —— 里面列了 3 条建议优先处理的、
+> 6 处语义偏差、以及所有降级点的定位方法。
 
 ### 致谢
 
@@ -257,6 +260,9 @@ renamed or removed in 1.21.11. Degraded spots are marked `// PORT:` in the code.
   [GunsmithLib](https://github.com/ChloePrime/GunsmithLib) instead.
 
 > **The hardest part — the Fabric 1.21.11 foundation — is done. The rest is up to you. PRs are welcome.**
+>
+> Before contributing, read **[TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)** — it lists 3 items worth
+> fixing first, 6 known semantic deviations, and how to locate every degraded spot.
 
 ### Credits
 
