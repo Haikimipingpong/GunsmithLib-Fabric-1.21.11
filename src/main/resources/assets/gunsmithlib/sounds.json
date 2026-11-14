@@ -1,0 +1,32 @@
+{
+  "shield_blocks_bullet": {
+    "subtitle": "subtitle.gunsmithlib.shield_blocks_bullet",
+    "sounds": [
+      "tacz:block/target_block_hit/target_block_hit_1",
+      "tacz:block/target_block_hit/target_block_hit_2",
+      "tacz:block/target_block_hit/target_block_hit_3",
+      "tacz:block/target_block_hit/target_block_hit_4",
+      "tacz:block/target_block_hit/target_block_hit_5",
+      "tacz:block/target_block_hit/target_block_hit_6",
+      "tacz:block/target_block_hit/target_block_hit_7"
+    ]
+  },
+  "ballistic_computer": {
+    "subtitle": "subtitle.gunsmithlib.ballistic_computer",
+    "sounds": [
+      "gunsmithlib:computer_button"
+    ]
+  },
+  "note_block_instrument.gun_steel_block": {
+    "subtitle": "subtitle.tacz.gun",
+    "sounds": [
+      "gunsmithlib:note_block_instrument/gun_steel_block"
+    ]
+  },
+  "note_block_instrument.giga_ammo_block": {
+    "subtitle": "subtitle.tacz.gun",
+    "sounds": [
+      "gunsmithlib:note_block_instrument/giga_ammo_block"
+    ]
+  }
+}

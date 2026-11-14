@@ -1,0 +1,118 @@
+package mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.fire_control;
+
+import com.tacz.guns.util.HitboxHelper;
+import mod.chloeprime.gunsmithlib.GunsmithLib;
+import mod.chloeprime.gunsmithlib.network.S2CSyncLockedTarget;
+import mod.chloeprime.gunsmithlib.proxies.ClientProxy;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.Vec3;
+import mod.chloeprime.gunsmithlib.network.Networking;
+import org.joml.Vector3d;
+
+import java.util.Optional;
+import java.util.UUID;
+
+public class HomingProjectileBehavior {
+    private static final String PDKEY_PREFIX = GunsmithLib.loc("homing.").toString();
+    public static final String PDKEY_ENABLED = PDKEY_PREFIX + "enabled";
+    public static final String PDKEY_TORQUE = PDKEY_PREFIX + "torque";
+    public static final String PDKEY_TARGET = PDKEY_PREFIX + "target";
+    public static final String PDKEY_TORQUE_LERP_RATE = PDKEY_PREFIX + "torque_lerp_rate";
+
+    public static void onBulletCreate(Entity shooter, Projectile bullet, double torque, double torqueLerpRate, Entity target) {
+        mod.chloeprime.gunsmithlib.common.util.EntityData.of(bullet).putBoolean(PDKEY_ENABLED, true);
+        mod.chloeprime.gunsmithlib.common.util.EntityData.of(bullet).putDouble(PDKEY_TORQUE, torque);
+        mod.chloeprime.gunsmithlib.common.util.EntityData.of(bullet).putDouble(PDKEY_TORQUE_LERP_RATE, torqueLerpRate);
+        if (!bullet.level().isClientSide()) {
+            mod.chloeprime.gunsmithlib.common.util.NbtCompat.putUUID(mod.chloeprime.gunsmithlib.common.util.EntityData.of(bullet), PDKEY_TARGET, target.getUUID());
+            Networking.sendToTrackingAndSelf(shooter, new S2CSyncLockedTarget(bullet.getId(), target.getId()));
+        }
+    }
+
+    public static void onBulletTick(Projectile bullet) {
+        var data = mod.chloeprime.gunsmithlib.common.util.EntityData.of(bullet);
+        if (!data.getBooleanOr(PDKEY_ENABLED, false)) {
+            return;
+        }
+        var torque = data.getDoubleOr(PDKEY_TORQUE, 0.0);
+        if (torque <= 1e-4) {
+            return;
+        }
+        var oldVelocity = bullet.getDeltaMovement();
+        var oldSpeed = oldVelocity.length();
+        if (oldSpeed <= 1e-4) {
+            return;
+        }
+        var target = loadUUIDSafely(data, PDKEY_TARGET)
+                .flatMap(uuid -> ClientProxy.getEntityByUuid(bullet.level(), uuid))
+                .orElse(null);
+        if (target == null || !target.isAlive()) {
+            return;
+        }
+        var oldDirection = oldVelocity.scale(1 / oldSpeed);
+        var targetDirection = HitboxHelper.getFixedBoundingBox(target, bullet.getOwner()).getCenter().subtract(bullet.position()).normalize();
+        if (targetDirection.lengthSqr() <= 1e-8) {
+            return;
+        }
+        var unitOffset = Math.abs(angleTo(oldDirection, targetDirection));
+        if (unitOffset <= 1e-8) {
+            return;
+        }
+        var torqueLerpRate = data.getDoubleOr(PDKEY_TORQUE_LERP_RATE, 0.0);
+        var totalTorque = Math.toRadians(torque) + angleTo(oldDirection, targetDirection) * torqueLerpRate;
+        var newDirection = slerp(oldDirection, targetDirection, Math.min(1, totalTorque / unitOffset));
+        if (newDirection.lengthSqr() >= 1e-4) {
+            Vec3 newVelocity = newDirection.normalize().scale(oldSpeed);
+            bullet.setDeltaMovement(newVelocity);
+            double x = newVelocity.x;
+            double y = newVelocity.y;
+            double z = newVelocity.z;
+            double distance = newVelocity.horizontalDistance();
+            bullet.setYRot((float) Math.toDegrees(Mth.atan2(x, z)));
+            bullet.setXRot((float) Math.toDegrees(Mth.atan2(y, distance)));
+        }
+    }
+
+    /**
+     * modified from <a href="https://github.com/godotengine/godot/blob/master/core/math/vector3.h#L239">Godot's implementation</a>
+     */
+    private static Vec3 slerp(Vec3 start, Vec3 end, double percent) {
+        double start_length_sq = start.lengthSqr();
+        double end_length_sq = end.lengthSqr();
+        if (start_length_sq == 0 || end_length_sq == 0) {
+            return start.lerp(end, percent);
+        }
+        Vec3 axis = start.cross(end);
+        double axis_length_sq = axis.lengthSqr();
+        if (axis_length_sq == 0) {
+            return start.lerp(end, percent);
+        }
+        axis = axis.scale(1 / Math.sqrt(axis_length_sq));
+        double start_length = Math.sqrt(start_length_sq);
+        double result_length = Mth.lerp(percent, start_length, Math.sqrt(end_length_sq));
+        double angle = angleTo(start, end);
+        var result = new Vector3d(start.x(), start.y(), start.z())
+                .rotateAxis(angle * percent, axis.x(), axis.y(), axis.z())
+                .mul(result_length / start_length);
+        return new Vec3(result.x(), result.y(), result.z());
+    }
+
+    private static double angleTo(Vec3 start, Vec3 end) {
+        return Math.atan2(start.cross(end).length(), start.dot(end));
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static Optional<UUID> loadUUIDSafely(CompoundTag compound, String key) {
+        if (!compound.getIntArray(key).isPresent()) {
+            return Optional.empty();
+        }
+        try {
+            return mod.chloeprime.gunsmithlib.common.util.NbtCompat.getUUID(compound, key);
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
+    }
+}

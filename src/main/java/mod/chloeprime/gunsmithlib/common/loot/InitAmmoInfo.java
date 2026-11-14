@@ -1,0 +1,54 @@
+package mod.chloeprime.gunsmithlib.common.loot;
+
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.tacz.guns.api.item.IAmmo;
+import mod.chloeprime.gunsmithlib.api.common.GunLootFunctions;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.functions.LootItemConditionalFunction;
+import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
+
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.List;
+
+@ParametersAreNonnullByDefault
+public class InitAmmoInfo extends LootItemConditionalFunction {
+    private final Identifier ammoId;
+
+    public static final MapCodec<InitAmmoInfo> CODEC = RecordCodecBuilder.mapCodec(builder -> commonFields(builder).and(
+            Identifier.CODEC.fieldOf("ammo_id").forGetter(func -> func.ammoId)
+    ).apply(builder, InitAmmoInfo::new));
+
+    public InitAmmoInfo(
+            List<LootItemCondition> conditions,
+            Identifier ammoId
+    ) {
+        super(conditions);
+        this.ammoId = ammoId;
+    }
+
+    public static Builder<?> initAmmoInfo(Identifier ammoId) {
+        return simpleBuilder((conditions) -> new InitAmmoInfo(conditions, ammoId));
+    }
+
+    public Identifier getAmmoId() {
+        return ammoId;
+    }
+
+    @Override
+    public @Nonnull ItemStack run(ItemStack stack, LootContext context) {
+        if (stack.getItem() instanceof IAmmo ammoItem) {
+            ammoItem.setAmmoId(stack, this.ammoId);
+        }
+        return stack;
+    }
+
+    @Override
+    public @Nonnull LootItemFunctionType<InitAmmoInfo> getType() {
+        return GunLootFunctions.INIT_AMMO_INFO.get();
+    }
+}

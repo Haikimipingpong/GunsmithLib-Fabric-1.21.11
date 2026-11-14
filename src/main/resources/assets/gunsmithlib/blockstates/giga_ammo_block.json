@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "gunsmithlib:block/giga_ammo_block" }
+  }
+}

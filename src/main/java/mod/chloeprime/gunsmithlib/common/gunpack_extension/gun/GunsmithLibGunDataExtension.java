@@ -1,0 +1,150 @@
+package mod.chloeprime.gunsmithlib.common.gunpack_extension.gun;
+
+import com.tacz.guns.api.item.gun.FireMode;
+import com.tacz.guns.resource.pojo.data.gun.GunData;
+import mod.chloeprime.gunsmithlib.GunsmithLib;
+import mod.chloeprime.gunsmithlib.api.util.GunInfo;
+import mod.chloeprime.gunsmithlib.api.util.Gunsmith;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.energy_v2.EnergyWeaponV2Data;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.explosive.GunExplosiveData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.screen_shake.ScreenShakeData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.GunsmithLibSharedDataExtension;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.fire_control.FireControlData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.shield.ShieldData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.energy.EnergyWeaponData;
+import mod.chloeprime.gunsmithlib.common.util.GunpackProperty;
+import net.minecraft.world.item.ItemStack;
+
+import javax.annotation.Nullable;
+import java.util.Optional;
+
+public final class GunsmithLibGunDataExtension extends GunsmithLibSharedDataExtension {
+    /**
+     * 电池数据，
+     * 为非 null 时该武器可以充电。
+     *
+     * @since 3.3.0
+     */
+    @Deprecated(since = "6.2.0")
+    @GunpackProperty
+    private @Nullable EnergyWeaponData battery;
+
+    /**
+     * 是否开启过热的视听反馈。
+     * 为 true 时，武器过热后会发出滋滋声并冒烟
+     *
+     * @since 3.3.0
+     */
+    @GunpackProperty
+    private boolean enable_overheat_feedback;
+
+    /**
+     * 枪盾数据
+     *
+     * @since 3.4.0
+     */
+    @GunpackProperty
+    private @Nullable ShieldData shield;
+
+    /**
+     * 制导数据
+     *
+     * @since 3.5.0
+     */
+    @GunpackProperty
+    private @Nullable FireControlData fire_control;
+
+    /**
+     * 只在枪械数据中生效的爆炸物扩展
+     *
+     * @since 4.9.0
+     */
+    @GunpackProperty
+    private @Nullable GunExplosiveData gun_explosive;
+
+    /**
+     * 如为 true，则不会出现在 TaCZ 的创造模式标签页里。
+     *
+     * @since 5.1.0
+     */
+    @GunpackProperty
+    private boolean hidden = false;
+
+    /**
+     * 新版电池数据，
+     * 为非 null 时该武器可以充电。
+     * 内部电能的具体用途由逻辑脚本控制。
+     *
+     * @since 6.2
+     */
+    @GunpackProperty
+    private @Nullable EnergyWeaponV2Data battery_v2;
+
+    /**
+     * 屏幕震动数据
+     *
+     * @since 7.0
+     */
+    @GunpackProperty
+    private @Nullable ScreenShakeData screen_shake;
+
+    // 下面是代码
+
+    public static Optional<GunsmithLibGunDataExtension> of(ItemStack stack) {
+        return Gunsmith.getGunInfo(stack).flatMap(GunsmithLibGunDataExtension::of);
+    }
+
+    public static Optional<GunsmithLibGunDataExtension> of(GunInfo gunInfo) {
+        return of(gunInfo.index().getGunData());
+    }
+
+    /**
+     * @since 6.5
+     */
+    public static Optional<GunsmithLibGunDataExtension> of(GunData gunData) {
+        return ((EnhancedGunData) gunData).gunsmith$getGunsmithLibExtension();
+    }
+
+    @Deprecated(since = "6.2.0")
+    public @Nullable EnergyWeaponData battery() {
+        return battery;
+    }
+
+    public boolean enableOverheatFeedback() {
+        return enable_overheat_feedback;
+    }
+
+    public @Nullable ShieldData getShieldData() {
+        return shield;
+    }
+
+    public @Nullable FireControlData getFireControlData() {
+        return fire_control;
+    }
+
+    public @Nullable GunExplosiveData getGunExplosiveData() {
+        return gun_explosive;
+    }
+
+    /**
+     * @return {@code false}
+     * @deprecated 请使用 {@link GunData#getChargeData(FireMode)}
+     */
+    @Deprecated
+    public boolean isChargeable() {
+        GunsmithLib.LOGGER.warn(ChargeableTriggerSystem.DEPRECATION_MESSAGE);
+        return false;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public Optional<EnergyWeaponV2Data> getVersion2BatteryData() {
+        return Optional.ofNullable(battery_v2);
+    }
+
+    public Optional<ScreenShakeData> getScreenShakeData() {
+        return Optional.ofNullable(screen_shake);
+    }
+}

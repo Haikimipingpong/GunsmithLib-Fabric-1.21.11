@@ -1,0 +1,62 @@
+plugins {
+    id 'fabric-loom' version '1.19.4'
+}
+
+version = "${minecraft_version}-${mod_version}-fabric"
+group = mod_group_id
+
+base { archivesName = mod_id }
+
+repositories {
+    maven { name = 'AliyunCentral'; url = 'https://maven.aliyun.com/repository/public' }
+    exclusiveContent {
+        forRepository {
+            maven { name = "Chloe Maven"; url = "https://maven.chloeprime.cn:4080/releases/" }
+        }
+        filter { includeGroupByRegex 'cn\\.chloeprime.*' }
+    }
+    exclusiveContent {
+        forRepository { maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+    maven { url = "https://jitpack.io" }
+    flatDir { dir 'lib' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+
+    // TaCZ (Fabric 1.21.11 unofficial port)
+    modCompileOnly files('lib/TACZ-Refabricated-1.21.11.jar')
+    modCompileOnly files('lib/ForgeConfigAPIPort-21.11.1.jar')
+
+    compileOnly files('lib/luaj-core-3.0.8-figura.jar', 'lib/luaj-jse-3.0.8-figura.jar')
+    compileOnly 'net.fabricmc:sponge-mixin:0.17.4+mixin.0.8.7'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    withSourcesJar()
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/gunsmithlib.accesswidener")
+    mixin {
+        defaultRefmapName = "gunsmithlib.refmap.json"
+        useLegacyMixinAp = false
+    }
+    runs {
+        client { client() }
+        server { server() }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xmaxerrs' << '10000'
+    options.compilerArgs << '-Xlint:none'
+}

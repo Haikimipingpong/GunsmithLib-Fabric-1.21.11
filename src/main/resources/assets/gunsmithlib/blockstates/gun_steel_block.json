@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "gunsmithlib:block/gun_steel_block" }
+  }
+}

@@ -1,0 +1,119 @@
+package mod.chloeprime.gunsmithlib.client.input;
+
+import cn.chloeprime.commons.rpc.RPC;
+import cn.chloeprime.commons.rpc.RPCTarget;
+import com.mojang.blaze3d.platform.InputConstants;
+import mod.chloeprime.gunsmithlib.GunsmithLib;
+import mod.chloeprime.gunsmithlib.client.GunsmithLibClient;
+import mod.chloeprime.gunsmithlib.client.gui.GunVariantSelectWheelScreen;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.ammo_variant.AmmoVariantSystem;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.ammo_variant.GunAmmoVariantSet;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.Connection;
+import mod.chloeprime.gunsmithlib.fcompat.Dist;
+import mod.chloeprime.gunsmithlib.fcompat.SubscribeEvent;
+import mod.chloeprime.gunsmithlib.fcompat.EventBusSubscriber;
+import mod.chloeprime.gunsmithlib.fcompat.ClientTickEvent;
+import mod.chloeprime.gunsmithlib.fcompat.InputEvent;
+import mod.chloeprime.gunsmithlib.fcompat.KeyConflictContext;
+import mod.chloeprime.gunsmithlib.fcompat.KeyModifier;
+
+import java.util.Optional;
+
+@EventBusSubscriber(Dist.CLIENT)
+public final class SwitchPartOrAmmoTypeKey {
+    public static final long SHORT_CLICK_THRESHOLD = 500;
+    private static long lastPressTime;
+    private static int isPressing;
+
+    public static final KeyMapping KEY_MAPPING = new KeyMapping("key.%s.switch_part_or_ammo_type.desc".formatted(GunsmithLib.MOD_ID), InputConstants.Type.KEYSYM, InputConstants.KEY_X, GunsmithLibInput.CATEGORY);
+
+    @SubscribeEvent
+    public static void onMousePress(InputEvent.MouseButton.Post event) {
+        if (InputConstants.KEY_X != event.getButton()) {
+            return;
+        }
+        signal(event.getAction());
+    }
+
+    @SubscribeEvent
+    public static void onKeyPress(InputEvent.Key event) {
+        if (InputConstants.KEY_X != event.getKey()) {
+            return;
+        }
+        signal(event.getAction());
+    }
+
+    private static void signal(int glfwAction) {
+        if (!KeyConflictContext.IN_GAME.isActive()) {
+            return;
+        }
+        var now = System.currentTimeMillis();
+        if (glfwAction == InputConstants.PRESS) {
+            isPressing++;
+            lastPressTime = now;
+            return;
+        }
+        if (glfwAction == InputConstants.REPEAT) {
+            return;
+        }
+        isPressing = Math.max(0, isPressing - 1);
+
+        if (now - lastPressTime < SHORT_CLICK_THRESHOLD) {
+            onShortPress();
+        }
+    }
+
+    private static void onShortPress() {
+        isPressing = 0;
+        if (GunsmithLibClient.isReloading()) {
+            return;
+        }
+        var isConnected = Optional.ofNullable(Minecraft.getInstance().getConnection())
+                .map(ClientPacketListener::getConnection)
+                .filter(Connection::isConnected)
+                .isPresent();
+        if (true) {
+            sendSwitch(mod.chloeprime.gunsmithlib.network.C2SSwitchVariant.ACTION_NEXT_PART, 0);
+        }
+    }
+
+    private static void sendSwitch(int action, int index) {
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                new mod.chloeprime.gunsmithlib.network.C2SSwitchVariant(action, index));
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        if (isPressing == 0) {
+            return;
+        }
+
+        var now = System.currentTimeMillis();
+        if (now - lastPressTime >= SHORT_CLICK_THRESHOLD) {
+            onLongPress();
+        }
+    }
+
+    private static void onLongPress() {
+        if (GunsmithLibClient.isReloading()) {
+            return;
+        }
+        isPressing = 0;
+        var mc = Minecraft.getInstance();
+        var player = mc.player;
+        if (player == null || mc.screen instanceof GunVariantSelectWheelScreen) {
+            return;
+        }
+        if (GunAmmoVariantSet.of(player.getMainHandItem()).isEmpty()) {
+            return;
+        }
+        var ids = AmmoVariantSystem.getAvailableVariants(player.getMainHandItem());
+        if (ids.size() <= 1) {
+            return;
+        }
+        mc.setScreen(new GunVariantSelectWheelScreen(ids));
+    }
+}

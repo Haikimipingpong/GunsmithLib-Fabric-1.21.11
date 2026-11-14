@@ -1,0 +1,309 @@
+package mod.chloeprime.gunsmithlib;
+
+import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Codec;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import mod.chloeprime.gunsmithlib.api.common.GunAttributes;
+import mod.chloeprime.gunsmithlib.api.common.GunLootFunctions;
+import mod.chloeprime.gunsmithlib.api.common.recipe.GunRecipeSerializers;
+import mod.chloeprime.gunsmithlib.client.GunsmithLibClient;
+import mod.chloeprime.gunsmithlib.common.block.SimpleCustomInstrumentBlock;
+import mod.chloeprime.gunsmithlib.common.block.SimpleCustomInstrumentDirectionalBlock;
+import mod.chloeprime.gunsmithlib.common.entity.AreaEffectCloud3D;
+import mod.chloeprime.gunsmithlib.common.entity.RangefinderMarker;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.ammo_variant.AmmoVariantStorage;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.fire_control.FireControlAttributes;
+import mod.chloeprime.gunsmithlib.common.entity.MagicLaser;
+import mod.chloeprime.gunsmithlib.common.item.ParticleTextureBlockItem;
+import mod.chloeprime.gunsmithlib.common.util.AttackDamageMobEffect;
+import mod.chloeprime.gunsmithlib.common.util.LesRaisinsCrashFix;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import mod.chloeprime.gunsmithlib.fcompat.IEventBus;
+import mod.chloeprime.gunsmithlib.fcompat.SubscribeEvent;
+import mod.chloeprime.gunsmithlib.fcompat.ModContainer;
+import mod.chloeprime.gunsmithlib.fcompat.EventBusSubscriber;
+import mod.chloeprime.gunsmithlib.fcompat.Mod;
+import mod.chloeprime.gunsmithlib.fcompat.ModConfig;
+import mod.chloeprime.gunsmithlib.fcompat.FMLCommonSetupEvent;
+import mod.chloeprime.gunsmithlib.fcompat.FMLLoader;
+import mod.chloeprime.gunsmithlib.fcompat.AttachmentType;
+import mod.chloeprime.gunsmithlib.fcompat.PercentageAttribute;
+import mod.chloeprime.gunsmithlib.fcompat.BuildCreativeModeTabContentsEvent;
+import mod.chloeprime.gunsmithlib.fcompat.DeferredHolder;
+import mod.chloeprime.gunsmithlib.fcompat.DeferredRegister;
+import mod.chloeprime.gunsmithlib.fcompat.NeoForgeRegistries;
+import org.slf4j.Logger;
+
+import java.awt.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+@Mod(GunsmithLib.MOD_ID)
+public class GunsmithLib {
+    public static final String MOD_ID = "gunsmithlib";
+    public static final Logger LOGGER = LogUtils.getLogger();
+
+    public GunsmithLib(IEventBus bus, ModContainer container) {
+        container.registerConfig(ModConfig.Type.STARTUP, StartupConfig.SPEC);
+
+        Blocks.DFR.register(bus);
+        Items.DFR.register(bus);
+        Attributes.REGISTRY.register(bus);
+        FireControlAttributes.init(bus);
+        MobEffects.REGISTRY.register(bus);
+        SoundEvents.REGISTRY.register(bus);
+        EntityTypes.DFR.register(bus);
+        GunRecipeSerializers.init(bus);
+        bus.addListener(FMLCommonSetupEvent.class, this::commonSetup);
+        container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        if (mod.chloeprime.gunsmithlib.fcompat.Dist.current().isClient()) {
+            GunsmithLibClient.onClientConstruct(container::registerConfig);
+        }
+        // MC1.21+ Only
+        DataComponents.DFR.register(bus);
+        GunLootFunctions.DFR_FUNC.register(bus);
+        GunLootFunctions.DFR_COND.register(bus);
+        LesRaisinsCrashFix.init(bus);
+    }
+
+    public static Identifier loc(String path) {
+        return Identifier.fromNamespaceAndPath(MOD_ID, path);
+    }
+
+    public static Identifier loc(String namespace, String path) {
+        return Identifier.fromNamespaceAndPath(namespace, path);
+    }
+
+    public static final class Blocks {
+        private static final DeferredRegister<Block> DFR = DeferredRegister.createBlocks(MOD_ID);
+        public static final Supplier<Block> GUN_STEEL_BLOCK = DFR.register("gun_steel_block", () -> new SimpleCustomInstrumentBlock(SoundEvents.GUN_STEEL_BLOCK_INSTRUMENT, BlockBehaviour.Properties.of()
+                .strength(5.0F, 6.0F)
+                .requiresCorrectToolForDrops()
+                .mapColor(MapColor.METAL).sound(SoundType.NETHERITE_BLOCK)
+                .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, GunsmithLib.loc("gun_steel_block")))));
+        public static final Supplier<Block> GIGA_AMMO_BLOCK = DFR.register("giga_ammo_block", () -> new SimpleCustomInstrumentDirectionalBlock(SoundEvents.GIGA_AMMO_BLOCK_INSTRUMENT, BlockBehaviour.Properties.of()
+                .strength(3.0F, 6.0F)
+                .requiresCorrectToolForDrops()
+                .mapColor(MapColor.COLOR_ORANGE).sound(SoundType.COPPER)
+                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, GunsmithLib.loc("giga_ammo_block")))));
+
+        private Blocks() {
+        }
+    }
+
+    @EventBusSubscriber
+    public static final class Items {
+        private static final DeferredRegister<Item> DFR = DeferredRegister.createItems(MOD_ID);
+        public static final Supplier<BlockItem> GUN_STEEL_BLOCK = DFR.register("gun_steel_block", () -> new ParticleTextureBlockItem(Blocks.GUN_STEEL_BLOCK, new Item.Properties().setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ITEM, GunsmithLib.loc("gun_steel_block")))));
+        public static final Supplier<BlockItem> GIGA_AMMO_BLOCK = DFR.register("giga_ammo_block", () -> new ParticleTextureBlockItem(Blocks.GIGA_AMMO_BLOCK, new Item.Properties().setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ITEM, GunsmithLib.loc("giga_ammo_block")))));
+
+        @SubscribeEvent
+        public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
+            if (CreativeModeTabs.BUILDING_BLOCKS.equals(event.getTabKey())) {
+                event.accept(new net.minecraft.world.item.ItemStack(GUN_STEEL_BLOCK.get()));
+                event.accept(new net.minecraft.world.item.ItemStack(GIGA_AMMO_BLOCK.get()));
+            }
+        }
+
+        private Items() {
+        }
+    }
+
+    public static class Attributes {
+        private static final Consumer<Attribute> SET_SYNCED = attribute -> attribute.setSyncable(true);
+        private static final Consumer<Attribute> SET_NEGATIVE = attribute -> attribute.setSentiment(Attribute.Sentiment.NEGATIVE);
+        private static final DeferredRegister<Attribute> REGISTRY = DeferredRegister.create(BuiltInRegistries.ATTRIBUTE, MOD_ID);
+
+        /**
+         * 射击伤害，是每个单片的基础伤害
+         */
+        public static final DeferredHolder<Attribute, Attribute> BULLET_DAMAGE = create("bullet_damage", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+
+        /**
+         * 穿甲倍率
+         * @since 4.6.0
+         */
+        public static final DeferredHolder<Attribute, Attribute> ARMOR_PIERCING_RATIO = createPercentBased("armor_piercing_ratio", 0, 0, 1);
+
+        /**
+         * 爆头倍率
+         * @since 4.6.0
+         */
+        public static final DeferredHolder<Attribute, Attribute> HEADSHOT_MULTIPLIER = createPercentBased("headshot_multiplier", 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+
+        /**
+         * 子弹飞行速度
+         */
+        public static final DeferredHolder<Attribute, Attribute> BULLET_SPEED = create("bullet_speed", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, SET_SYNCED);
+
+        public static final DeferredHolder<Attribute, Attribute> H_RECOIL = createPercentBased("horz_recoil", 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, SET_SYNCED.andThen(SET_NEGATIVE));
+        public static final DeferredHolder<Attribute, Attribute> V_RECOIL = createPercentBased("vert_recoil", 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, SET_SYNCED.andThen(SET_NEGATIVE));
+
+        public static final DeferredHolder<Attribute, Attribute> RPM = create("rpm", 300, 1, 1200, SET_SYNCED);
+        public static final DeferredHolder<Attribute, Attribute> AMMO_CAPACITY = create("ammo_capacity", 30, 0, Integer.MAX_VALUE);
+        public static final DeferredHolder<Attribute, Attribute> RELOAD_SPEED = createPercentBased("reload_speed", 1, 0, Double.POSITIVE_INFINITY, SET_SYNCED);
+
+
+        @SuppressWarnings("SameParameterValue")
+        private static DeferredHolder<Attribute, Attribute> create(String name, double defaultValue, double min, double max) {
+            return create(name, defaultValue, min, max, _a -> {});
+        }
+
+        private static DeferredHolder<Attribute, Attribute> create(String name, double defaultValue, double min, double max, Consumer<Attribute> customizer) {
+            return REGISTRY.register(name, () -> {
+                var attribute = new RangedAttribute(createLangKey(name), defaultValue, min, max);
+                customizer.accept(attribute);
+                return attribute;
+            });
+        }
+
+        @SuppressWarnings("SameParameterValue")
+        private static DeferredHolder<Attribute, Attribute> createPercentBased(String name, double defaultValue, double min, double max) {
+            return createPercentBased(name, defaultValue, min, max, attribute -> {});
+        }
+
+        private static DeferredHolder<Attribute, Attribute> createPercentBased(String name, double defaultValue, double min, double max, Consumer<Attribute> customizer) {
+            return REGISTRY.register(name, () -> {
+                var attribute = new PercentageAttribute(createLangKey(name), defaultValue, min, max);
+                customizer.accept(attribute);
+                return attribute;
+            });
+        }
+
+        private static String createLangKey(String name) {
+            return "attribute.name.%s.%s".formatted(MOD_ID, name);
+        }
+    }
+
+    public static class MobEffects {
+        private static final DeferredRegister<MobEffect> REGISTRY = DeferredRegister.create(BuiltInRegistries.MOB_EFFECT, MOD_ID);
+        public static final DeferredHolder<MobEffect, MobEffect> GUN_DAMAGE = REGISTRY.register("crossfire", () -> new AttackDamageMobEffect(MobEffectCategory.BENEFICIAL, Color.LIGHT_GRAY, Config.CROSSFIRE_BUFF_POWER::get)
+                .addAttributeModifier(GunAttributes.BULLET_DAMAGE, loc("crossfire_buff"), 0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+    }
+
+    public static class SoundEvents {
+        private static final DeferredRegister<SoundEvent> REGISTRY = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, MOD_ID);
+        public static final DeferredHolder<SoundEvent, SoundEvent> SHIELD_BLOCKS_BULLET = REGISTRY.register("shield_blocks_bullet", () -> SoundEvent.createVariableRangeEvent(loc( "shield_blocks_bullet")));
+        public static final DeferredHolder<SoundEvent, SoundEvent> BALLISTIC_COMPUTER = REGISTRY.register("ballistic_computer", () -> SoundEvent.createVariableRangeEvent(loc( "ballistic_computer")));
+        public static final DeferredHolder<SoundEvent, SoundEvent> GUN_STEEL_BLOCK_INSTRUMENT = REGISTRY.register("note_block_instrument.gun_steel_block", () -> SoundEvent.createVariableRangeEvent(loc( "note_block_instrument.gun_steel_block")));
+        public static final DeferredHolder<SoundEvent, SoundEvent> GIGA_AMMO_BLOCK_INSTRUMENT = REGISTRY.register("note_block_instrument.giga_ammo_block", () -> SoundEvent.createVariableRangeEvent(loc( "note_block_instrument.giga_ammo_block")));
+    }
+
+    public static class EntityTypes {
+        private static final DeferredRegister<EntityType<?>> DFR = DeferredRegister.create(Registries.ENTITY_TYPE, MOD_ID);
+        public static final Supplier<EntityType<MagicLaser>> MAGIC_LASER = DFR.register("magic_laser", () -> MagicLaser.TYPE);
+        public static final Supplier<EntityType<RangefinderMarker>> RANGEFINDER_MARKER = DFR.register("rangefinder_marker", () -> RangefinderMarker.TYPE);
+        public static final Supplier<EntityType<AreaEffectCloud3D>> AREA_EFFECT_CLOUD_3D = DFR.register("area_effect_cloud_3d", () -> AreaEffectCloud3D.TYPE);
+    }
+
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        checkKnownIncompatibilities();
+        event.enqueueWork(GunLootFunctions::init);
+    }
+
+    private void checkKnownIncompatibilities() {
+        // There will be no more TaCZ Fire Control Extension on MC1.21
+    }
+
+    // MC1.21+ Only
+    public static class DataComponents {
+        private static final DeferredRegister<DataComponentType<?>> DFR = DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, MOD_ID);
+        public static final Supplier<DataComponentType<Integer>> ENERGY_STORED = DFR.register("energy_stored", () -> DataComponentType.<Integer>builder()
+                .persistent(Codec.INT)
+                .networkSynchronized(ByteBufCodecs.INT)
+                .build());
+        public static final Supplier<DataComponentType<ItemAttributeModifiers>> ATTACHMENT_ATTRIBUTES = DFR.register("attachment_attribute_modifiers", () -> DataComponentType.<ItemAttributeModifiers>builder()
+                .persistent(ItemAttributeModifiers.CODEC)
+                .networkSynchronized(ItemAttributeModifiers.STREAM_CODEC)
+                .build());
+        public static final Supplier<DataComponentType<Integer>> SELECTED_AIRBURST_DISTANCE_INDEX = DFR.register("selected_airburst_distance_index", () -> DataComponentType.<Integer>builder()
+                .persistent(Codec.INT)
+                .networkSynchronized(ByteBufCodecs.VAR_INT)
+                .build());
+        public static final Supplier<DataComponentType<Double>> CUSTOM_AIRBURST_DISTANCE = DFR.register("custom_airburst_distance", () -> DataComponentType.<Double>builder()
+                .persistent(Codec.DOUBLE)
+                .networkSynchronized(ByteBufCodecs.DOUBLE)
+                .build());
+
+        // 多弹种系统
+
+        public static final Supplier<DataComponentType<AmmoVariantStorage>> AMMO_VARIANT_STORAGE = DFR.register("ammo_variant_storage", () -> DataComponentType.<AmmoVariantStorage>builder()
+                .persistent(AmmoVariantStorage.CODEC)
+                .networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(AmmoVariantStorage.CODEC))
+                .cacheEncoding()
+                .build());
+        public static final Supplier<DataComponentType<String>> SELECTED_PART = DFR.register("selected_part", () -> DataComponentType.<String>builder()
+                .persistent(Codec.STRING)
+                .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                .build());
+
+        // 蓄力扳机系统
+
+        public static final Supplier<DataComponentType<Boolean>> CHARGING = DFR.register("charging", () -> DataComponentType.<Boolean>builder()
+                .persistent(Codec.BOOL)
+                .networkSynchronized(ByteBufCodecs.BOOL)
+                .build());
+        public static final Supplier<DataComponentType<Long>> CHARGE_BEGIN_TIME = DFR.register("charge_begin_time", () -> DataComponentType.<Long>builder()
+                .persistent(Codec.LONG)
+                .networkSynchronized(ByteBufCodecs.VAR_LONG)
+                .build());
+
+        // 同步数据
+
+        public static final Supplier<DataComponentType<Object2IntMap<String>>> SYNCED_INTS = DFR.register("synced_ints", () -> DataComponentType
+                .<Object2IntMap<String>>builder()
+                .persistent(Codec.unboundedMap(Codec.STRING, Codec.INT).xmap(Object2IntOpenHashMap::new, Function.identity()))
+                .networkSynchronized(ByteBufCodecs.map(Object2IntOpenHashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT))
+                .cacheEncoding()
+                .build());
+
+        public static final Supplier<DataComponentType<Object2DoubleMap<String>>> SYNCED_NUMBERS = DFR.register("synced_numbers", () -> DataComponentType
+                .<Object2DoubleMap<String>>builder()
+                .persistent(Codec.unboundedMap(Codec.STRING, Codec.DOUBLE).xmap(Object2DoubleOpenHashMap::new, Function.identity()))
+                .networkSynchronized(ByteBufCodecs.map(Object2DoubleOpenHashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.DOUBLE))
+                .cacheEncoding()
+                .build());
+
+        public static final Supplier<DataComponentType<Map<String,String>>> SYNCED_STRINGS = DFR.register("synced_strings", () -> DataComponentType
+                .<Map<String,String>>builder()
+                .persistent(Codec.unboundedMap(Codec.STRING, Codec.STRING))
+                .networkSynchronized(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.STRING_UTF8))
+                .cacheEncoding()
+                .build());
+
+        // V2 存电量
+
+        public static final Supplier<DataComponentType<Long>> ENERGY_STORED_V2 = DFR.register("energy_stored_v2", () -> DataComponentType.<Long>builder()
+                .persistent(Codec.LONG)
+                .networkSynchronized(ByteBufCodecs.VAR_LONG)
+                .build());
+    }
+
+}

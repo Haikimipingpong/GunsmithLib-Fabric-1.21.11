@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "gunsmithlib",
+  "version": "1.21.11-7.1.1-fabric",
+  "name": "GunsmithLib",
+  "description": "Unofficial Fabric port of GunsmithLib (TaCZ extension library).",
+  "authors": [
+    "ChloePrime",
+    "Fabric port"
+  ],
+  "license": "GPL-3.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "mod.chloeprime.gunsmithlib.fabric.GunsmithLibFabric"
+    ],
+    "client": [
+      "mod.chloeprime.gunsmithlib.fabric.GunsmithLibClientFabric"
+    ]
+  },
+  "mixins": [
+    "gunsmithlib.mixins.json"
+  ],
+  "accessWidener": "gunsmithlib.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "fabric-api": "*",
+    "minecraft": "1.21.11",
+    "tacz": ">=1.1.8",
+    "forgeconfigapiport": "*"
+  }
+}

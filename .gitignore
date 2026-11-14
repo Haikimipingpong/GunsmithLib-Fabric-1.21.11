@@ -1,0 +1,36 @@
+# ---- Gradle ----
+.gradle/
+.gradle-home/
+build/
+out/
+# 保留 wrapper，方便直接 git clone 后构建
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+*.log
+
+# ---- 运行/调试目录 ----
+run/
+runs/
+logs/
+crash-reports/
+
+# ---- 第三方二进制依赖（体积大、版权归各自作者，请自行下载放入 lib/）----
+lib/*.jar
+!lib/.gitkeep
+
+# ---- 预构建产物（发 Release 时作为附件上传）----
+prebuilt/
+
+# ---- 系统 ----
+.DS_Store
+.AppleDouble
+.LSOverride

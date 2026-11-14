@@ -1,0 +1,107 @@
+package mod.chloeprime.gunsmithlib.proxies;
+
+import cn.chloeprime.commons.rpc.RPCFlow;
+import cn.chloeprime.commons.rpc.RemoteCallable;
+import mod.chloeprime.gunsmithlib.GunsmithLib;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import mod.chloeprime.gunsmithlib.fcompat.LogicalSide;
+import mod.chloeprime.gunsmithlib.fcompat.FMLLoader;
+import mod.chloeprime.gunsmithlib.fcompat.EffectiveSide;
+import mod.chloeprime.gunsmithlib.fcompat.ServerLifecycleHooks;
+
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public class ClientProxy {
+    private static final boolean DEDICATED_SERVER = mod.chloeprime.gunsmithlib.fcompat.Dist.current().isDedicatedServer();
+    private static final AtomicBoolean GET_ENTITY_LOGGED = new AtomicBoolean(false);
+
+    public static float getPartialTick() {
+        return DEDICATED_SERVER ? 1 : ClientProxyImpl.getPartialTick();
+    }
+
+    public static Optional<RegistryAccess> getRegistryAccess() {
+        if (DEDICATED_SERVER || EffectiveSide.get().isServer()) {
+            return Optional.ofNullable(ServerLifecycleHooks.getCurrentServer()).map(MinecraftServer::registryAccess);
+        } else {
+            return ClientProxyImpl.getRegistryAccess();
+        }
+    }
+
+    public static LogicalSide sideOf(Level level) {
+        return level.isClientSide() ? LogicalSide.CLIENT : LogicalSide.SERVER;
+    }
+
+    public static Optional<Level> clientLevel() {
+        if (DEDICATED_SERVER) {
+            GunsmithLib.LOGGER.warn("Trying to access client level on dedicated server.");
+            return Optional.empty();
+        }
+        if (!FMLLoader.isProduction() && EffectiveSide.get().isServer()) {
+            GunsmithLib.LOGGER.warn("Trying to access client level on logical server.");
+        }
+        return ClientProxyImpl.clientLevel();
+    }
+
+    public static Optional<Entity> getEntityByUuid(Level level, UUID uuid) {
+        if (level instanceof ServerLevel serverLevel) {
+            return Optional.ofNullable(serverLevel.getEntity(uuid));
+        } else if (!DEDICATED_SERVER) {
+            return Optional.ofNullable(ClientProxyImpl.getEntityByUuid(level, uuid));
+        }
+        if (!GET_ENTITY_LOGGED.getAndSet(true)) {
+            GunsmithLib.LOGGER.warn("Unknown dist in {}::{}", ClientProxy.class.getCanonicalName(), "getEntityByUuid", new IllegalStateException());
+        }
+        return Optional.empty();
+    }
+
+    public static Vec3 bobCompensation(LogicalSide side, Vec3 vec) {
+        if (DEDICATED_SERVER || side.isServer()) {
+            return vec;
+        } else {
+            return ClientProxyImpl.bobCompensation(vec);
+        }
+    }
+
+    @RemoteCallable(flow = RPCFlow.SERVER_TO_CLIENT)
+    public static void receiveNoParticleExplodePacket(Vec3 pos, float power, BlockPos[] toBlow, Vec3 knockback,
+                                                      Explosion.BlockInteraction blockInteraction) {
+        if (DEDICATED_SERVER) {
+            return;
+        }
+        ClientProxyImpl.receiveNoParticleExplodePacket(pos, power, toBlow, knockback, blockInteraction);
+    }
+
+    public static long getGameTime() {
+        return getGameTime(EffectiveSide.get().isClient());
+    }
+
+    public static long getGameTime(boolean isClientSide) {
+        if (DEDICATED_SERVER || !isClientSide) {
+            return Optional.ofNullable(ServerLifecycleHooks.getCurrentServer())
+                    .map(MinecraftServer::overworld)
+                    .map(Level::getGameTime)
+                    .orElse(0L);
+        }
+        return ClientProxyImpl.getGameTime();
+    }
+
+    public static float getPartialTicks() {
+        return getPartialTicks(EffectiveSide.get().isClient());
+    }
+
+    public static float getPartialTicks(boolean isClientSide) {
+        if (DEDICATED_SERVER || !isClientSide) {
+            return 1;
+        }
+        return ClientProxyImpl.getPartialTicks();
+    }
+}

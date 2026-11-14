@@ -1,0 +1,379 @@
+package mod.chloeprime.gunsmithlib.common.gunpack_extension.shared;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.Iterables;
+import com.google.common.base.Suppliers;
+import com.tacz.guns.api.TimelessAPI;
+import com.tacz.guns.api.item.attachment.AttachmentType;
+import com.tacz.guns.resource.index.CommonAttachmentIndex;
+import com.tacz.guns.resource.pojo.data.gun.GunData;
+import mod.chloeprime.gunsmithlib.api.util.AmmoInfo;
+import mod.chloeprime.gunsmithlib.api.util.AttachmentInfo;
+import mod.chloeprime.gunsmithlib.api.util.GunInfo;
+import mod.chloeprime.gunsmithlib.api.util.Gunsmith;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.ammo.GunsmithLibAmmoDataExtension;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.attachment.EnhancedAttachmentData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.attachment.GunsmithLibAttachmentDataExtension;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.gun.GunsmithLibGunDataExtension;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.attribute.GunsmithLibAttributeModifierEntry;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.damage_source_control.DamageSourceControlData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.potion_effect.PotionEffectData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.hit_particle.HitParticleData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.raytrace_control.RaytraceControlData;
+import mod.chloeprime.gunsmithlib.common.gunpack_extension.shared.ricochet.RicochetData;
+import mod.chloeprime.gunsmithlib.common.scripting.ScriptBakery;
+import mod.chloeprime.gunsmithlib.common.util.GunpackProperty;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import org.jetbrains.annotations.NotNull;
+import org.luaj.vm2.LuaTable;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+/**
+ * 枪械和配件共通的扩展功能
+ * @since 4.2.0
+ */
+public class GunsmithLibSharedDataExtension {
+    /**
+     * 枪械/配件的属性修饰器
+     */
+    @GunpackProperty
+    private @Nullable GunsmithLibAttributeModifierEntry[] attribute_modifiers;
+
+    /**
+     * 命中后对目标施加的药水效果
+     *
+     * @since 4.3.0
+     */
+    @GunpackProperty
+    private @Nullable PotionEffectData[] potion_effects;
+
+    /**
+     * 带有药水效果的爆炸弹药爆炸后药水云的持续时间
+     */
+    @GunpackProperty
+    private int area_effect_cloud_duration = 600;
+
+    /**
+     * 药水云的最小大小比例（结束时的大小/初始大小）
+     */
+    @GunpackProperty
+    private float area_effect_cloud_min_size_rate = 0;
+
+    /**
+     * 命中时的粒子效果，
+     * 可以添加在枪械和子弹的 data 里，添加在配件上无效。
+     * <p>
+     * 因为一些历史原因，命中粒子的法线方向是 Effekseer 编辑器内的 y 轴正上方。
+     * @since 5.2.0
+     */
+    @GunpackProperty
+    private @Nullable HitParticleData[] hit_particles;
+
+    /**
+     * 开火时的粒子效果，
+     * 可以添加在枪械和子弹的 data 里，添加在配件上无效。
+     * <p>
+     * 开火粒子只支持 AAA 粒子，且必须设置 {@code "is_aaa_particle": true}，否则将被忽略。
+     * <p>
+     * 射击粒子的前方是 Effekseer 编辑器内的 +Z 方向。
+     *
+     * @since 6.1
+     */
+    @GunpackProperty
+    private @Nullable HitParticleData[] shoot_particles;
+
+    /**
+     * 子弹轨迹，
+     * 可以添加在枪械和子弹的 data 里，添加在配件上无效。
+     * <p>
+     * 弹道轨迹只支持 AAA 粒子，且必须设置 {@code "is_aaa_particle": true}，否则将被忽略。
+     * <p>
+     * 射击粒子的前方是 Effekseer 编辑器内的 +Z 方向。
+     *
+     * @since 6.4
+     */
+    @GunpackProperty
+    private @Nullable HitParticleData[] bullet_trails;
+
+    /**
+     * 如果配置了子弹轨迹且此选项为 true，那么将隐藏 tacz 本体那一套基于原版粒子的子弹轨迹。
+     *
+     * @since 6.4
+     */
+    @GunpackProperty
+    private boolean hide_vanilla_bullet_trails = true;
+
+    /**
+     * 跳弹设置。
+     * 玩补包榴弹玩的
+     *
+     * @since 5.2.0
+     */
+    @GunpackProperty
+    private @Nullable RicochetData ricochet;
+
+    /**
+     * 方块穿透 / 阻挡控制
+     *
+     * @since 5.8.0
+     */
+    @GunpackProperty
+    private @Nullable RaytraceControlData raytrace_control;
+
+    @GunpackProperty
+    private @Nullable DamageSourceControlData damage_source_control;
+
+    /**
+     * 配件和弹药的逻辑脚本
+     *
+     * @since 6.2
+     */
+    @GunpackProperty
+    private @Nullable Identifier script;
+
+    /**
+     * 配件和弹药的逻辑脚本的脚本参数
+     *
+     * @since 6.2
+     */
+    @GunpackProperty
+    private @Nullable Map<String, Object> script_param;
+
+    // 下面是具体实现
+
+    public List<GunsmithLibAttributeModifierEntry> getAttributeModifiers() {
+        return List.of(MoreObjects.firstNonNull(attribute_modifiers, EMPTY_MODIFIER_POJO_ARRAY));
+    }
+
+    public List<PotionEffectData> getPotionEffects() {
+        return List.of(MoreObjects.firstNonNull(potion_effects,  EMPTY_MOB_EFFECT_ARRAY));
+    }
+
+    public int getAreaEffectCloudDuration() {
+        return area_effect_cloud_duration;
+    }
+
+    public float getAreaEffectCloudMinSizeRate() {
+        return area_effect_cloud_min_size_rate;
+    }
+
+    public @Nullable HitParticleData[] getHitParticles() {
+        return hit_particles;
+    }
+
+    public @Nullable HitParticleData[] getShootParticles() {
+        return shoot_particles;
+    }
+
+    /**
+     * @since 6.4
+     */
+    public @Nullable HitParticleData[] getBulletTrails() {
+        return bullet_trails;
+    }
+
+    /**
+     * @since 6.4
+     */
+    public boolean hideVanillaBulletTrails() {
+        return hide_vanilla_bullet_trails;
+    }
+
+    public @Nullable RicochetData getRicochetData() {
+        return ricochet;
+    }
+
+    public @Nullable RaytraceControlData getRaytraceControlData() {
+        return raytrace_control;
+    }
+    public @Nullable DamageSourceControlData getDamageSourceControlData() {
+        return damage_source_control;
+    }
+
+    public Optional<LuaTable> getScript() {
+        return Optional.ofNullable(bakedScript.get().clazz());
+    }
+
+    public @Nonnull LuaTable getScriptParams() {
+        return bakedScript.get().parameters();
+    }
+
+    private static final GunsmithLibAttributeModifierEntry[] EMPTY_MODIFIER_POJO_ARRAY = new GunsmithLibAttributeModifierEntry[0];
+    private static final AttachmentType[] ATTACH_TYPE_REGISTRY = AttachmentType.values();
+    private static final PotionEffectData[] EMPTY_MOB_EFFECT_ARRAY = new PotionEffectData[0];
+    private transient ItemAttributeModifiers bakedAttributeModifiers;
+
+    @NotNull
+    public ItemAttributeModifiers getBakedAttributeModifiers() {
+        if (bakedAttributeModifiers == null) {
+            var builder = ItemAttributeModifiers.builder();
+            for (GunsmithLibAttributeModifierEntry pojo : getAttributeModifiers()) {
+                pojo.getModifier().ifPresent(pair -> builder.add(pair.getLeft(), pair.getRight(), EquipmentSlotGroup.MAINHAND));
+            }
+            bakedAttributeModifiers = builder.build();
+        }
+        return bakedAttributeModifiers;
+    }
+
+    private final Supplier<ScriptBakery.@NotNull BakedScript> bakedScript = Suppliers.memoize(() -> ScriptBakery
+            .bake(script, script_param)
+            .orElseGet(ScriptBakery::createDefault));
+
+    public static Optional<GunsmithLibSharedDataExtension> forGun(GunInfo gun) {
+        return GunsmithLibGunDataExtension.of(gun).map(Function.identity());
+    }
+
+    public static Optional<GunsmithLibSharedDataExtension> forAmmo(AmmoInfo ammo) {
+        return GunsmithLibAmmoDataExtension.of(ammo).map(Function.identity());
+    }
+
+    public static Optional<GunsmithLibSharedDataExtension> forAttachment(AttachmentInfo attachment) {
+        return GunsmithLibAttachmentDataExtension.of(attachment).map(Function.identity());
+    }
+
+    public static <T> Optional<T> forGunOrAmmo(
+            @Nonnull ItemStack gun,
+            @Nonnull Function<GunsmithLibSharedDataExtension, T> field
+    ) {
+        Objects.requireNonNull(gun);
+        Objects.requireNonNull(field);
+
+        var gunInfo = Gunsmith.getGunInfo(gun).orElse(null);
+        if (gunInfo == null) {
+            return Optional.empty();
+        }
+        return forGunOrAmmo(gunInfo, field);
+    }
+
+    @SuppressWarnings("OptionalIsPresent")
+    public static <T> Optional<T> forGunOrAmmo(
+            @Nonnull GunInfo gunInfo,
+            @Nonnull Function<GunsmithLibSharedDataExtension, T> field
+    ) {
+        Objects.requireNonNull(gunInfo);
+        Objects.requireNonNull(field);
+
+        var onGun = GunsmithLibSharedDataExtension
+                .forGun(gunInfo)
+                .map(field);
+        if (onGun.isPresent()) {
+            return onGun;
+        }
+        var onAmmo = Gunsmith
+                .getAmmoInfo(Gunsmith.createAmmoItemFromId(gunInfo.index().getGunData().getAmmoId()))
+                .flatMap(GunsmithLibSharedDataExtension::forAmmo)
+                .map(field);
+        if (onAmmo.isPresent()) {
+            return onAmmo;
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * @since 7.0.0
+     */
+    @SuppressWarnings("OptionalIsPresent")
+    public static <T> Optional<T> forGunOrAmmo(
+            @Nonnull GunData data,
+            @Nonnull Function<GunsmithLibSharedDataExtension, T> field
+    ) {
+        Objects.requireNonNull(data);
+        Objects.requireNonNull(field);
+
+        var onGun = GunsmithLibGunDataExtension.of(data).map(field);
+        if (onGun.isPresent()) {
+            return onGun;
+        }
+        var onAmmo = TimelessAPI.getCommonAmmoIndex(data.getAmmoId())
+                .flatMap(GunsmithLibAmmoDataExtension::of)
+                .map(field);
+        if (onAmmo.isPresent()) {
+            return onAmmo;
+        }
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unused")
+    public static <T> List<T> forGunOrAmmoWithAttachment(
+            @Nonnull ItemStack gun,
+            @Nonnull Function<GunsmithLibSharedDataExtension, T> field,
+            RegistryAccess regAccess1211
+    ) {
+        Objects.requireNonNull(gun);
+        Objects.requireNonNull(field);
+
+        var gunInfo = Gunsmith.getGunInfo(gun).orElse(null);
+        if (gunInfo == null) {
+            return Collections.emptyList();
+        }
+        return forGunOrAmmoWithAttachment(gunInfo, field, regAccess1211);
+    }
+
+    public static <T> List<T> forGunOrAmmoWithAttachment(
+            @Nonnull GunInfo gunInfo,
+            @Nonnull Function<GunsmithLibSharedDataExtension, T> field,
+            RegistryAccess regAccess1211
+    ) {
+        Objects.requireNonNull(gunInfo);
+        Objects.requireNonNull(field);
+
+        var fromBase = forGunOrAmmo(gunInfo, field).orElse(null);
+        var fromAttach = (List<T>) null;
+        var iGun = gunInfo.gunItem();
+        var stack = gunInfo.gunStack();
+        for (var type : AttachmentType.values()) {
+            T onAttach = Gunsmith.getAttachmentInfo(iGun.getAttachment(stack, type))
+                    .flatMap(GunsmithLibSharedDataExtension::forAttachment)
+                    .map(field)
+                    .orElse(null);
+            if (onAttach != null) {
+                if (fromAttach == null) {
+                    fromAttach = new ArrayList<>(6);
+                }
+                fromAttach.add(onAttach);
+            }
+        }
+        if (fromBase == null && fromAttach == null) {
+            return Collections.emptyList();
+        }
+        if (fromBase == null) {
+            return fromAttach;
+        }
+        if (fromAttach == null) {
+            return List.of(fromBase);
+        }
+        var total = new ArrayList<T>(fromAttach.size() + 1);
+        total.add(fromBase);
+        total.addAll(fromAttach);
+        return Collections.unmodifiableList(total);
+    }
+
+    /**
+     * 返回枪械和配件上所有的扩展 data，不包括子弹扩展 data。
+     *
+     * @param gun 枪械对象。
+     * @return 枪械和配件上所有的扩展 data，不包括子弹！
+     */
+    public static Iterable<GunsmithLibSharedDataExtension> allOf(GunInfo gun) {
+        // From Gun
+        Iterable<GunsmithLibSharedDataExtension> fromGun = forGun(gun)
+                .map(List::of)
+                .orElse(List.of());
+        // From Attachment
+        Iterable<GunsmithLibSharedDataExtension> fromAttachment = Iterables.transform(Arrays.asList(ATTACH_TYPE_REGISTRY), attachmentType -> TimelessAPI
+                .getCommonAttachmentIndex(gun.gunItem().getAttachmentId(gun.gunStack(), attachmentType))
+                .map(CommonAttachmentIndex::getData)
+                .flatMap(data -> ((EnhancedAttachmentData) data).gunsmith$getGunsmithLibExtension())
+                .orElse(null));
+        return Iterables.filter(Iterables.concat(fromGun, fromAttachment), Objects::nonNull);
+    }
+}
