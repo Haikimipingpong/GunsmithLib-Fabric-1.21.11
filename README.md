@@ -117,11 +117,13 @@ export JAVA_HOME=/path/to/jdk-25      # 必须是 JDK 25，fabric-loom 1.19.4 �
 
 **本仓库不会被维护。**
 
-- 这是一次性的移植工作，**不接受功能请求，不保证跟进上游更新**。
-- Issue / PR 可能不会被查看或合并。
+- 这是一次性的移植工作，**不保证跟进上游更新**，也不承诺响应时间。
+- **Issue / PR 欢迎提交**，但合并不保证。
 - 代码按"现状"提供，**不提供任何担保**；使用风险自负。
 - 如需长期维护的版本，建议基于上游 [GunsmithLib](https://github.com/ChloePrime/GunsmithLib)
   自行继续，或联系原作者。
+
+> **最难的 Fabric 1.21.11 地基已经打通，剩下的交给你们了。欢迎提交 PR。**
 
 ### 致谢
 
@@ -246,11 +248,13 @@ renamed or removed in 1.21.11. Degraded spots are marked `// PORT:` in the code.
 
 **This repository will not be maintained.**
 
-- It is a one-off port: **no feature requests, no guarantee of tracking upstream updates.**
-- Issues / PRs may not be reviewed or merged.
+- It is a one-off port: **no guarantee of tracking upstream updates**, and no promised response time.
+- **Issues / PRs are welcome**, but merging is not guaranteed.
 - Provided **as-is**, without warranty of any kind; use at your own risk.
 - If you need a maintained version, build on the upstream
   [GunsmithLib](https://github.com/ChloePrime/GunsmithLib) instead.
+
+> **The hardest part — the Fabric 1.21.11 foundation — is done. The rest is up to you. PRs are welcome.**
 
 ### Credits
 
