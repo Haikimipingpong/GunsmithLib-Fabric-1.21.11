@@ -134,6 +134,8 @@ export JAVA_HOME=/path/to/jdk-25      # 必须是 JDK 25，fabric-loom 1.19.4 �
 - **FabricMC** —— Fabric Loader / API / Loom。
 - **Fuzss** —— Forge Config API Port。
 
+也许哪天我发现我自己都用不了了，我就会去维护一下。
+
 本项目沿用上游 **GPL-3.0** 许可，详见 [LICENSE](LICENSE)；
 第三方组件授权与署名见 [NOTICE.md](NOTICE.md)。
 
@@ -264,6 +266,8 @@ renamed or removed in 1.21.11. Degraded spots are marked `// PORT:` in the code.
 - **Sh1roCu and TaCZ Refabricated contributors** — the unofficial Fabric port this build runs on.
 - **FabricMC** — Fabric Loader / API / Loom.
 - **Fuzss** — Forge Config API Port.
+
+Maybe one day, when I find I can no longer use it myself, I'll come back and maintain it.
 
 Licensed under **GPL-3.0**, inherited from upstream — see [LICENSE](LICENSE).
 Third-party attribution in [NOTICE.md](NOTICE.md).
