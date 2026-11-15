@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public final class SimpleEventBus implements IEventBus {
-    private record Listener(EventPriority priority, Consumer<Event> action) {}
+    private record Listener(EventPriority priority, Consumer<Object> action) {}
 
     private final Map<Class<?>, List<Listener>> listeners = new ConcurrentHashMap<>();
 
@@ -24,8 +24,8 @@ public final class SimpleEventBus implements IEventBus {
     }
 
     @Override
-    public <T extends Event> T post(T event) {
-        for (Class<?> c = event.getClass(); c != null && Event.class.isAssignableFrom(c); c = c.getSuperclass()) {
+    public <T> T post(T event) {
+        for (Class<?> c = event.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
             var list = listeners.get(c);
             if (list == null) continue;
             for (Listener l : new ArrayList<>(list)) {
@@ -47,11 +47,9 @@ public final class SimpleEventBus implements IEventBus {
         for (Method m : targetType.getDeclaredMethods()) {
             var ann = m.getAnnotation(SubscribeEvent.class);
             if (ann == null || m.getParameterCount() != 1) continue;
-            if (!Event.class.isAssignableFrom(m.getParameterTypes()[0])) continue;
             m.setAccessible(true);
             boolean isStatic = Modifier.isStatic(m.getModifiers());
-            @SuppressWarnings("unchecked")
-            Consumer<Event> action = e -> {
+            Consumer<Object> action = e -> {
                 try {
                     m.invoke(isStatic ? null : target, e);
                 } catch (Throwable ex) {
@@ -64,27 +62,27 @@ public final class SimpleEventBus implements IEventBus {
     }
 
     @Override
-    public <T extends Event> void addListener(Consumer<T> listener) {
+    public <T> void addListener(Consumer<T> listener) {
         addListener(EventPriority.NORMAL, listener);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Event> void addListener(EventPriority priority, Consumer<T> listener) {
+    public <T> void addListener(EventPriority priority, Consumer<T> listener) {
         // Type erasure: generic type is unknown, so such listeners are silently ignored.
         mod.chloeprime.gunsmithlib.fcompat.GunsmithLibLog.warn("Event listener {} registered without an event class; ignored", listener);
     }
 
-    public <T extends Event> void addListener(Class<T> type, Consumer<T> listener) {
+    public <T> void addListener(Class<T> type, Consumer<T> listener) {
         addListener(type, EventPriority.NORMAL, listener);
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends Event> void addListener(Class<T> type, EventPriority priority, Consumer<T> listener) {
-        addListenerRaw(type, priority, (Consumer<Event>) (Consumer<?>) listener);
+    public <T> void addListener(Class<T> type, EventPriority priority, Consumer<T> listener) {
+        addListenerRaw(type, priority, (Consumer<Object>) (Consumer<?>) listener);
     }
 
-    private void addListenerRaw(Class<?> type, EventPriority priority, Consumer<Event> action) {
+    private void addListenerRaw(Class<?> type, EventPriority priority, Consumer<Object> action) {
         var list = listeners.computeIfAbsent(type, k -> new ArrayList<>());
         synchronized (list) {
             list.add(new Listener(priority, action));

@@ -38,7 +38,8 @@
     "common.minecraft.AttributeSupplierBuilderMixin",
     "common.minecraft.ItemStackAttributeMixin",
     "common.minecraft.LivingEntityTickMixin",
-    "common.minecraft.PlayerTickMixin"
+    "common.minecraft.PlayerTickMixin",
+    "common.tacz.MixinBullet"
   ],
   "client": [
     "client.minecraft.CameraAccessor",

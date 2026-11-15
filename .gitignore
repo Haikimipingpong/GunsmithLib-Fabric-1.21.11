@@ -34,3 +34,9 @@ prebuilt/
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# 游戏运行时目录（从本目录启动游戏时会生成）
+config/
+patchouli_data.json
+patchouli_books/
+tlm_custom_pack/

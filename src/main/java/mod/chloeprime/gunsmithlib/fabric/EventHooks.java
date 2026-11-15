@@ -43,6 +43,11 @@ public final class EventHooks {
                 NeoForge.EVENT_BUS.post(new LevelEvent.Load(level));
             }
         });
+        // 枪包功能（子弹追踪、药水云、空爆……）依赖"实体进入世界"事件来初始化
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register(
+                (entity, world) -> NeoForge.EVENT_BUS.post(new EntityJoinLevelEvent(entity, world)));
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_UNLOAD.register(
+                (entity, world) -> NeoForge.EVENT_BUS.post(new EntityLeaveLevelEvent(entity, world)));
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 NeoForge.EVENT_BUS.post(new PlayerEvent.PlayerLoggedInEvent(handler.getPlayer())));
 

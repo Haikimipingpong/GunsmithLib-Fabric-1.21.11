@@ -185,18 +185,8 @@ public abstract class MixinBullet extends Projectile implements EnhancedKineticB
         }
     }
 
-    @WrapOperation(
-            method = "tacAttackEntity", remap = false,
-            at = @At(value = "INVOKE", remap = true, target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
-    private boolean useSpecialHurtByTag(Entity victim, DamageSource source, float amount, Operation<Boolean> original) {
-        if (!(victim instanceof SpecialHurtable injected)){
-            return original.call(victim, source, amount);
-        }
-        HurtFunction1 method = injected.gunsmith$usingSpecialHurt()
-                ? injected.getSpecialHurtFunction1()
-                : ((source1, amount1) -> original.call(victim, source1, amount1));
-        return method.invoke(source, amount);
-    }
+    // PORT: 1.21.11 的 Entity#hurt 返回 void（且 final），此处的特殊伤害包装无法再注入；
+    // 特殊伤害机制依赖的 MixinLivingEntity 也处于下线状态，这里一并移除。
 
     // 方块穿透控制
 
