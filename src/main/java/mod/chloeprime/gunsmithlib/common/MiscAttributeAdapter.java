@@ -133,9 +133,19 @@ public class MiscAttributeAdapter {
             var speed = (cache == null
                     ? gun.index().getBulletData().getSpeed()
                     : cache.getCache(GunProperties.AMMO_SPEED)) / 20;
-            var rpm = cache == null
-                    ? gunData.getRoundsPerMinute(gun.getFireMode())
-                    : cache.getCache(GunProperties.ROUNDS_PER_MINUTE);
+            // 注意：getRoundsPerMinute 内部会走 MixinGunData#adjustRpmByAttribute 读取属性值，
+            // 若此时仍处于 gunMode，就会形成"属性 = 属性"的自反馈，永远卡在默认值 300。
+            // 因此计算基础值时临时关闭 gunMode。
+            Integer cachedRpm = cache == null ? null : cache.getCache(GunProperties.ROUNDS_PER_MINUTE);
+            if (cachedRpm == null) {
+                syncState.gunsmith$setInGunMode(false);
+                try {
+                    cachedRpm = gunData.getRoundsPerMinute(gun.getFireMode());
+                } finally {
+                    syncState.gunsmith$setInGunMode(true);
+                }
+            }
+            var rpm = cachedRpm;
 
             var lockRange = cache != null && cache.getCache(EffectiveRangeModifier.ID) instanceof Number range
                     ? range.doubleValue()

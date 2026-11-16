@@ -25,7 +25,16 @@ public class MixinGunData implements EnhancedGunData {
             at = @At(value = "INVOKE", target = "Lcom/tacz/guns/resource/modifier/AttachmentCacheProperty;getCache(Ljava/lang/String;)Ljava/lang/Object;")
     )
     private Object adjustRpmByAttribute(Object baseRpm, LivingEntity shooter, FireMode fireMode) {
-        return (int) MiscAttributeAdapter.rpm(shooter);
+        // 只有玩家确实处于"枪械属性同步"状态时才用属性值覆盖，
+        // 否则属性默认值（300）会把所有枪的射速一律压低。
+        if (shooter instanceof mod.chloeprime.gunsmithlib.common.internal.GunAttributeSyncState syncState
+                && syncState.gunsmith$isInGunMode()) {
+            var rpm = MiscAttributeAdapter.rpm(shooter);
+            if (rpm > 0) {
+                return (int) rpm;
+            }
+        }
+        return baseRpm;
     }
 
     @GunpackProperty
