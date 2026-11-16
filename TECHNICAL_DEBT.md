@@ -60,7 +60,7 @@ grep -rn "// PORT:" src/main/java
 
 ## 已下线的 mixin（16 个）
 
-`src/main/resources/gunsmithlib.mixins.json` 里当前启用 49 / 上游 65。
+`src/main/resources/gunsmithlib.mixins.json` 里当前启用 52 / 上游 65。
 下线的大多是因为目标方法在 1.21.11 改名或删除，逐个恢复的方法：
 
 1. 用 `javap -p` 查新签名；

@@ -25,17 +25,19 @@ public class AlternativeArmorPierceFormulaMixin {
 
     @WrapOperation(
             method = "tacAttackEntity",
-            at = @At(value = "INVOKE", ordinal = 0, remap = true, target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
-    private boolean altFormula(
-            Entity target, DamageSource source, float originalAmount, Operation<Boolean> original,
+            at = @At(value = "INVOKE", ordinal = 0, remap = true, target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)V"))
+    private void altFormula(
+            Entity target, DamageSource source, float originalAmount, Operation<Void> original,
             EntityKineticBullet.MaybeMultipartEntity parts, float fullDamageOfThisHit, Pair<DamageSource, DamageSource> sources
     ) {
         if (!Config.ALTERNATIVE_ARMOR_PIERCING_FORMULA.get()) {
-            return original.call(target, source, originalAmount);
+            original.call(target, source, originalAmount);
+            return;
         }
         // 打中非生物，不计算穿甲
         if (!(target instanceof LivingEntity victim)) {
-            return original.call(target, source, fullDamageOfThisHit);
+            original.call(target, source, fullDamageOfThisHit);
+            return;
         }
         // 打中生物，开始穿甲
         var armor = victim.getAttribute(Attributes.ARMOR);
@@ -48,7 +50,7 @@ public class AlternativeArmorPierceFormulaMixin {
             if (tough != null) {
                 tough.addTransientModifier(modifier);
             }
-            return original.call(target, source, fullDamageOfThisHit);
+            original.call(target, source, fullDamageOfThisHit);
         } finally {
             if (armor != null) {
                 armor.removeModifier(modifier);
@@ -64,15 +66,15 @@ public class AlternativeArmorPierceFormulaMixin {
      */
     @WrapOperation(
             method = "tacAttackEntity",
-            at = @At(value = "INVOKE", ordinal = 1, remap = true, target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
-    private boolean cancelApPartDamage(
-            Entity target, DamageSource source, float originalAmount, Operation<Boolean> original,
+            at = @At(value = "INVOKE", ordinal = 1, remap = true, target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)V"))
+    private void cancelApPartDamage(
+            Entity target, DamageSource source, float originalAmount, Operation<Void> original,
             EntityKineticBullet.MaybeMultipartEntity parts, float fullDamageOfThisHit, Pair<DamageSource, DamageSource> sources
     ) {
         if (Config.ALTERNATIVE_ARMOR_PIERCING_FORMULA.get()) {
-            return false;
-        } else {
-            return original.call(target, source, originalAmount);
+            // 取消穿甲段伤害：不调用原方法
+            return;
         }
+        original.call(target, source, originalAmount);
     }
 }

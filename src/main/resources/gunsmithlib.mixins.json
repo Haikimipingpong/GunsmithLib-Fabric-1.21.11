@@ -39,7 +39,9 @@
     "common.minecraft.ItemStackAttributeMixin",
     "common.minecraft.LivingEntityTickMixin",
     "common.minecraft.PlayerTickMixin",
-    "common.tacz.MixinBullet"
+    "common.tacz.MixinBullet",
+    "common.tacz.AlternativeArmorPierceFormulaMixin",
+    "common.minecraft.MixinLivingEntity"
   ],
   "client": [
     "client.minecraft.CameraAccessor",

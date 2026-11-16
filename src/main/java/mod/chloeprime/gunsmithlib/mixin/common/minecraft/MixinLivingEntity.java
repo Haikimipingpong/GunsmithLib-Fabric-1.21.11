@@ -83,13 +83,23 @@ public abstract class MixinLivingEntity implements
     @Override
     @SuppressWarnings("AddedMixinMembersNamePattern")
     public HurtFunction1 getSpecialHurtFunction1() {
-        return this::hurt;
+        // 1.21.11 的 Entity#hurt 返回 void，这里包一层保持旧接口的 boolean 语义
+        return (source, amount) -> {
+            ((LivingEntity) (Object) this).hurt(source, amount);
+            return true;
+        };
     }
 
     @Override
     @SuppressWarnings("AddedMixinMembersNamePattern")
     public HurtFunction2 getSpecialHurtFunction2() {
-        return this::actuallyHurt;
+        // 1.21.11 的 actuallyHurt 需要 ServerLevel 参数
+        return (source, amount) -> {
+            var self = (LivingEntity) (Object) this;
+            if (self.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                this.actuallyHurt(serverLevel, source, amount);
+            }
+        };
     }
 
     @Override
@@ -118,6 +128,5 @@ public abstract class MixinLivingEntity implements
         gunsmith$isInGunAttributeMode = value;
     }
 
-    @Shadow public abstract boolean hurt(@NotNull DamageSource p_21016_, float p_21017_);
-    @Shadow protected abstract void actuallyHurt(DamageSource p_21240_, float p_21241_);
+    @Shadow protected abstract void actuallyHurt(net.minecraft.server.level.ServerLevel level, DamageSource source, float amount);
 }

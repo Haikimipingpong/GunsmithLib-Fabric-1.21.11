@@ -246,7 +246,7 @@ Compile-time dependencies live in `lib/` and are **not redistributed** here
 - Laser beam rendering, v2 crosshair, HUD ammo-type display
 - Damage-type tag injection, attachment attribute tooltips
 
-**Disabled mixins**: 49 of 65 are enabled. Most are disabled because their target methods were
+**Disabled mixins**: 52 of 65 are enabled. Most are disabled because their target methods were
 renamed or removed in 1.21.11. Degraded spots are marked `// PORT:` in the code.
 
 ### Maintenance
