@@ -1,5 +1,11 @@
 # GunsmithLib · Fabric 1.21.11（非官方移植 / Unofficial Port）
 
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-62B47A?logo=minecraft&logoColor=white)
+![Fabric](https://img.shields.io/badge/Fabric-0.19.3%2B-DBD0B4)
+![TaCZ](https://img.shields.io/badge/TaCZ-1.1.8-blue)
+![License](https://img.shields.io/badge/License-GPL--3.0-blue)
+![Status](https://img.shields.io/badge/status-unmaintained-lightgrey)
+
 > **中文** · [English below](#english)
 
 ---
@@ -20,7 +26,10 @@
 ### 这是什么
 
 本仓库是 **[GunsmithLib](https://github.com/ChloePrime/GunsmithLib)**（作者 **ChloePrime**，GPL-3.0）
-从 **NeoForge 1.21.1** 移植到 **Minecraft 1.21.11 / Fabric** 的**非官方**源码。
+从 **NeoForge 1.21.1** 移植到 **Minecraft 1.21.11 / Fabric** 的**非官方**源码，也就是
+**GunsmithLib 1.21.11 Fabric 移植版**（unofficial GunsmithLib port for Minecraft 1.21.11 Fabric）。
+如果你想在 **Minecraft 1.21.11 + Fabric** 环境下使用 [TaCZ](https://github.com/MCModderAnchor/TACZ)
+枪械模组的扩展功能（枪包数据扩展、变体轮盘、手持属性加成、空爆/追踪/药水云等），这就是对应的移植版本。
 
 GunsmithLib 是枪械模组 **TaCZ（Timeless and Classics Zero）** 的扩展库 / 前置，
 面向枪包作者提供数据驱动的扩展能力（枪盾、火控、能量武器、破片、空爆、跳弹、
