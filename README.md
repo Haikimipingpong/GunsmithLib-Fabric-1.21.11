@@ -4,6 +4,17 @@
 
 ---
 
+## 下载 / Download
+
+| 方式 | 链接 |
+|---|---|
+| **直接下载 jar** | [gunsmithlib-1.21.11-7.1.1-fabric.jar](https://github.com/Haikimipingpong/GunsmithLib-Fabric-1.21.11/raw/main/dist/gunsmithlib-1.21.11-7.1.1-fabric.jar) |
+| **发布页（含更新说明）** | [releases](https://github.com/Haikimipingpong/GunsmithLib-Fabric-1.21.11/releases) |
+
+> **GunsmithLib 1.21.11 Fabric 移植版** —— 这是 [GunsmithLib](https://github.com/ChloePrime/GunsmithLib) 的
+> **unofficial GunsmithLib port for Minecraft 1.21.11 Fabric**，为 [TaCZ](https://github.com/MCModderAnchor/TACZ)
+> 枪械模组提供扩展支持。需要 Minecraft 1.21.11 + Fabric Loader + Fabric API。
+
 ## 中文
 
 ### 这是什么
